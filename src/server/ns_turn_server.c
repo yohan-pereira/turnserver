@@ -65,27 +65,31 @@ int TURN_MAX_ALLOCATE_TIMEOUT_STUN_ONLY = 3;
 static inline void log_method(ts_ur_super_session* ss, const char *method, int err_code, const u08bits *reason)
 {
   if(ss) {
+	  char* remote_ip = "";
+	  if(ss->client_socket) {
+		  remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket));
+	  } 	    
 	  if(!method) method = "unknown";
 	  if(!err_code) {
 		  if(ss->origin[0]) {
 			  TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO,
-					"session %018llu: origin <%s> realm <%s> user <%s>: incoming packet %s processed, success\n",
-					(unsigned long long)(ss->id), (const char*)(ss->origin),(const char*)(ss->realm_options.name),(const char*)(ss->username),method);
+					"remote %s session %018llu: origin <%s> realm <%s> user <%s>: incoming packet %s processed, success\n",
+					remote_ip, (unsigned long long)(ss->id), (const char*)(ss->origin),(const char*)(ss->realm_options.name),(const char*)(ss->username),method);
 		} else {
 			TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO,
-				"session %018llu: realm <%s> user <%s>: incoming packet %s processed, success\n",
-				(unsigned long long)(ss->id), (const char*)(ss->realm_options.name),(const char*)(ss->username),method);
+				"remote %s session %018llu: realm <%s> user <%s>: incoming packet %s processed, success\n",
+				remote_ip, (unsigned long long)(ss->id), (const char*)(ss->realm_options.name),(const char*)(ss->username),method);
 		}
 	  } else {
 		  if(!reason) reason=(const u08bits*)"Unknown error";
 		  if(ss->origin[0]) {
 			  TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO,
-					  "session %018llu: origin <%s> realm <%s> user <%s>: incoming packet %s processed, error %d: %s\n",
-					  (unsigned long long)(ss->id), (const char*)(ss->origin),(const char*)(ss->realm_options.name),(const char*)(ss->username), method, err_code, reason);
+					  "remote %s session %018llu: origin <%s> realm <%s> user <%s>: incoming packet %s processed, error %d: %s\n",
+					  remote_ip, (unsigned long long)(ss->id), (const char*)(ss->origin),(const char*)(ss->realm_options.name),(const char*)(ss->username), method, err_code, reason);
 		  } else {
 			  TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO,
-					  "session %018llu: realm <%s> user <%s>: incoming packet %s processed, error %d: %s\n",
-					  (unsigned long long)(ss->id), (const char*)(ss->realm_options.name),(const char*)(ss->username), method, err_code, reason);
+					  "remote %s session %018llu: realm <%s> user <%s>: incoming packet %s processed, error %d: %s\n",
+					  remote_ip, (unsigned long long)(ss->id), (const char*)(ss->realm_options.name),(const char*)(ss->username), method, err_code, reason);
 		  }
 	  }
   }
@@ -1904,9 +1908,12 @@ static void tcp_peer_connection_completed_callback(int success, void *arg)
 		ioa_network_buffer_handle nbh = ioa_network_buffer_allocate(server->e);
 		size_t len = ioa_network_buffer_get_size(nbh);
 
+		char* remote_ip = "";
+		remote_ip = ip_to_str(&tc->peer_addr);
+
 		if(success) {
 			if(register_callback_on_ioa_socket(server->e, tc->peer_s, IOA_EV_READ, tcp_peer_input_handler, tc, 1)<0) {
-				TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "%s: cannot set TCP peer data input callback\n", __FUNCTION__);
+				TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "remote %s: %s: cannot set TCP peer data input callback\n", remote_ip, __FUNCTION__);
 				success=0;
 				err_code = 500;
 			}
@@ -1935,7 +1942,7 @@ static void tcp_peer_connection_completed_callback(int success, void *arg)
 				if(laddr)
 					addr_to_string(laddr,(u08bits*)ls);
 				addr_to_string(&(tc->peer_addr),(u08bits*)rs);
-				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "%s: failure to connect from %s to %s\n", __FUNCTION__, ls,rs);
+				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: %s: failure to connect from %s to %s\n", remote_ip, __FUNCTION__, ls,rs);
 			}
 			const u08bits *reason = (const u08bits *)"Connection Timeout or Failure";
 			stun_init_error_response_str(STUN_METHOD_CONNECT, ioa_network_buffer_data(nbh), &len, err_code, reason, &(tc->tid));
@@ -2074,10 +2081,11 @@ static void tcp_peer_accept_connection(ioa_socket_handle s, void *arg)
 			FUNCEND;
 			return;
 		}
-
+		char* remote_ip = "";
+		remote_ip = ip_to_str(peer_addr);
 		tcp_connection *tc = get_tcp_connection_by_peer(a, peer_addr);
 		if(tc) {
-			TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "%s: peer data socket with this address already exist\n", __FUNCTION__);
+			TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "%s: %s: peer data socket with this address already exist\n", remote_ip, __FUNCTION__);
 			if(tc->peer_s != s)
 				close_ioa_socket(s);
 			FUNCEND;
@@ -2087,14 +2095,14 @@ static void tcp_peer_accept_connection(ioa_socket_handle s, void *arg)
 		if(!good_peer_addr(server, ss->realm_options.name, peer_addr)) {
 			u08bits saddr[256];
 			addr_to_string(peer_addr, saddr);
-			TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "%s: an attempt to connect from a peer with forbidden address: %s\n", __FUNCTION__,saddr);
+			TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "%s: %s: an attempt to connect from a peer with forbidden address: %s\n", remote_ip, __FUNCTION__,saddr);
 			close_ioa_socket(s);
 			FUNCEND;
 			return;
 		}
 
 		if(!can_accept_tcp_connection_from_peer(a,peer_addr,server->server_relay)) {
-			TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "%s: peer has no permission to connect\n", __FUNCTION__);
+			TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "%s: %s: peer has no permission to connect\n", remote_ip, __FUNCTION__);
 			close_ioa_socket(s);
 			FUNCEND;
 			return;
@@ -2105,7 +2113,7 @@ static void tcp_peer_accept_connection(ioa_socket_handle s, void *arg)
 		int err_code=0;
 		tc = create_tcp_connection(server->id, a, &tid, peer_addr, &err_code);
 		if(!tc) {
-			TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "%s: cannot create TCP connection\n", __FUNCTION__);
+			TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "%s: %s: cannot create TCP connection\n", remote_ip, __FUNCTION__);
 			close_ioa_socket(s);
 			FUNCEND;
 			return;
@@ -2118,7 +2126,7 @@ static void tcp_peer_accept_connection(ioa_socket_handle s, void *arg)
 		set_ioa_socket_sub_session(s,tc);
 
 		if(register_callback_on_ioa_socket(server->e, s, IOA_EV_READ, tcp_peer_input_handler, tc, 1)<0) {
-			TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "%s: cannot set TCP peer data input callback\n", __FUNCTION__);
+			TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "%s: %s: cannot set TCP peer data input callback\n", remote_ip, __FUNCTION__);
 			IOA_CLOSE_SOCKET(tc->peer_s);
 			tc->state = TC_STATE_UNKNOWN;
 			FUNCEND;
@@ -3199,6 +3207,10 @@ static int check_stun_auth(turn_turnserver *server,
 			int *postpone_reply,
 			int can_resume)
 {
+	char* remote_ip = "";
+	if(ss->client_socket) {
+	        remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket));
+	}
 	u08bits usname[STUN_MAX_USERNAME_SIZE+1];
 	u08bits nonce[STUN_MAX_NONCE_SIZE+1];
 	u08bits realm[STUN_MAX_REALM_SIZE+1];
@@ -3394,8 +3406,8 @@ static int check_stun_auth(turn_turnserver *server,
 		/* we always return NULL for short-term credentials here */
 		/* direct user pattern is supported only for long-term credentials */
 		TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR,
-				"%s: Cannot find credentials of user <%s>\n",
-				__FUNCTION__, (char*)usname);
+				"%s: %s: Cannot find credentials of user <%s>\n",
+				remote_ip, __FUNCTION__, (char*)usname);
 		*err_code = 401;
 		*reason = (const u08bits*)"Unauthorised";
 		if(server->ct != TURN_CREDENTIALS_SHORT_TERM) {
@@ -3416,8 +3428,8 @@ static int check_stun_auth(turn_turnserver *server,
 
 		if(too_weak) {
 					TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR,
-							"%s: user %s credentials are incorrect: SHA function is too weak\n",
-									__FUNCTION__, (char*)usname);
+							"%s: %s: user %s credentials are incorrect: SHA function is too weak\n",
+									remote_ip, __FUNCTION__, (char*)usname);
 					*err_code = SHA_TOO_WEAK_ERROR_CODE;
 					*reason = (const u08bits*)"Unauthorised: weak SHA function is used";
 					if(server->ct != TURN_CREDENTIALS_SHORT_TERM) {
@@ -3435,8 +3447,8 @@ static int check_stun_auth(turn_turnserver *server,
 		}
 
 		TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR,
-				"%s: user %s credentials are incorrect\n",
-				__FUNCTION__, (char*)usname);
+				"%s: %s: user %s credentials are incorrect\n",
+				remote_ip, __FUNCTION__, (char*)usname);
 		*err_code = 401;
 		*reason = (const u08bits*)"Unauthorised";
 		if(server->ct != TURN_CREDENTIALS_SHORT_TERM) {
@@ -3501,6 +3513,12 @@ static int handle_turn_command(turn_turnserver *server, ts_ur_super_session *ss,
 	if(!(ss->client_socket))
 		return -1;
 
+	char* remote_ip = "";
+	if(ss->client_socket) {
+	        remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket));
+	}
+
+
 	u16bits unknown_attrs[MAX_NUMBER_OF_UNKNOWN_ATTRS];
 	u16bits ua_num = 0;
 	u16bits method = stun_get_method_str(ioa_network_buffer_data(in_buffer->nbh), 
@@ -3520,8 +3538,8 @@ static int handle_turn_command(turn_turnserver *server, ts_ur_super_session *ss,
 			no_response = 1;
 			if(server->verbose) {
 				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO,
-									"%s: STUN method 0x%x ignored\n",
-									__FUNCTION__, (unsigned int)method);
+									"%s: %s: STUN method 0x%x ignored\n",
+									remote_ip, __FUNCTION__, (unsigned int)method);
 			}
 
 		} else if((method != STUN_METHOD_BINDING) && (*(server->stun_only))) {
@@ -3529,8 +3547,8 @@ static int handle_turn_command(turn_turnserver *server, ts_ur_super_session *ss,
 				no_response = 1;
 				if(server->verbose) {
 					TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO,
-										"%s: STUN method 0x%x ignored\n",
-										__FUNCTION__, (unsigned int)method);
+										"%s: %s: STUN method 0x%x ignored\n",
+										remote_ip, __FUNCTION__, (unsigned int)method);
 				}
 
 		} else if((method != STUN_METHOD_BINDING) || (*(server->secure_stun))) {
@@ -3585,8 +3603,8 @@ static int handle_turn_command(turn_turnserver *server, ts_ur_super_session *ss,
 							corigin[0]=0;
 							if(get_canonic_origin(o,corigin,STUN_MAX_ORIGIN_SIZE)<0) {
 								TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR,
-									"%s: Wrong origin format: %s\n",
-									__FUNCTION__, o);
+									"%s: %s: Wrong origin format: %s\n",
+									remote_ip, __FUNCTION__, o);
 							}
 							if(!strncmp(ss->origin,corigin,STUN_MAX_ORIGIN_SIZE)) {
 								origin_found = 1;
@@ -3641,8 +3659,8 @@ static int handle_turn_command(turn_turnserver *server, ts_ur_super_session *ss,
 							corigin[0]=0;
 							if(get_canonic_origin(o,corigin,STUN_MAX_ORIGIN_SIZE)<0) {
 								TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR,
-									"%s: Wrong origin format: %s\n",
-									__FUNCTION__, o);
+									"%s: %s: Wrong origin format: %s\n",
+									remote_ip, __FUNCTION__, o);
 							}
 							strncpy(ss->origin,corigin,STUN_MAX_ORIGIN_SIZE);
 							turn_free(corigin,sarlen+1);
@@ -3763,7 +3781,7 @@ static int handle_turn_command(turn_turnserver *server, ts_ur_super_session *ss,
 				if(*resp_constructed && !err_code && (origin_changed || dest_changed)) {
 
 					if (server->verbose) {
-						TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "RFC 5780 request successfully processed\n");
+						TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "%s: RFC 5780 request successfully processed\n", remote_ip);
 					}
 
 					{
@@ -3782,7 +3800,7 @@ static int handle_turn_command(turn_turnserver *server, ts_ur_super_session *ss,
 				break;
 			}
 			default:
-				TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "Unsupported STUN request received, method 0x%x\n",(unsigned int)method);
+				TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "%s: Unsupported STUN request received, method 0x%x\n", remote_ip, (unsigned int)method);
 			};
 		}
 
@@ -3826,7 +3844,7 @@ static int handle_turn_command(turn_turnserver *server, ts_ur_super_session *ss,
 
 			default:
 				if (server->verbose) {
-					TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "Unsupported STUN indication received: method 0x%x\n",(unsigned int)method);
+					TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "%s: Unsupported STUN indication received: method 0x%x\n",remote_ip, (unsigned int)method);
 				}
 			}
 		};
@@ -3836,7 +3854,7 @@ static int handle_turn_command(turn_turnserver *server, ts_ur_super_session *ss,
 		no_response = 1;
 
 		if (server->verbose) {
-			TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "Wrong STUN message received\n");
+			TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "%s: Wrong STUN message received\n", remote_ip);
 		}
 	}
 
@@ -4076,6 +4094,11 @@ int shutdown_client_connection(turn_turnserver *server, ts_ur_super_session *ss,
 	if (!ss)
 		return -1;
 
+	char* remote_ip = "";
+	if(ss->client_socket) {
+	        remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket));
+	}
+
 	report_turn_session_info(server,ss,1);
 	dec_quota(ss);
 	dec_bps(ss);
@@ -4106,7 +4129,8 @@ int shutdown_client_connection(turn_turnserver *server, ts_ur_super_session *ss,
 
 	if (eve(server->verbose)) {
 		TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO,
-				"closing session 0x%lx, client socket 0x%lx (socket session=0x%lx)\n",
+				"%s: closing session 0x%lx, client socket 0x%lx (socket session=0x%lx)\n",
+				remote_ip,
 				(long) ss,
 				(long) ss->client_socket,
 				(long)get_ioa_socket_session(ss->client_socket));
@@ -4122,8 +4146,8 @@ int shutdown_client_connection(turn_turnserver *server, ts_ur_super_session *ss,
 		addr_to_string(get_remote_addr_from_ioa_socket(ss->client_socket),(u08bits*)sraddr);
 		addr_to_string(get_local_addr_from_ioa_socket(ss->client_socket),(u08bits*)sladdr);
 
-		TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "session %018llu: closed (2nd stage), user <%s> realm <%s> origin <%s>, local %s, remote %s, reason: %s\n",
-					(unsigned long long)(ss->id), (char*)ss->username,(char*)ss->realm_options.name,(char*)ss->origin, sladdr,sraddr, reason);
+		TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "%s: session %018llu: closed (2nd stage), user <%s> realm <%s> origin <%s>, local %s, remote %s, reason: %s\n",
+					remote_ip, (unsigned long long)(ss->id), (char*)ss->username,(char*)ss->realm_options.name,(char*)ss->origin, sladdr,sraddr, reason);
 	}
 
 	IOA_CLOSE_SOCKET(ss->client_socket);
@@ -4437,10 +4461,15 @@ static int read_client_connection(turn_turnserver *server,
 		ss->received_bytes += (u32bits)ioa_network_buffer_get_size(in_buffer->nbh);
 		turn_report_session_usage(ss);
 	}
+	char* remote_ip = "";
+	if(ss->client_socket) {
+	        remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket));
+	}
 
 	if (eve(server->verbose)) {
 		TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO,
-			      "%s: data.buffer=0x%lx, data.len=%ld\n", __FUNCTION__,
+			      "%s: %s: data.buffer=0x%lx, data.len=%ld\n", __FUNCTION__,
+			      remote_ip,
 			      (long)ioa_network_buffer_data(in_buffer->nbh), 
 			      (long)ioa_network_buffer_get_size(in_buffer->nbh));
 	}
@@ -4472,8 +4501,8 @@ static int read_client_connection(turn_turnserver *server,
 		}
 
 		if (eve(server->verbose)) {
-			TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "%s: wrote to peer %d bytes\n",
-					__FUNCTION__, (int) rc);
+			TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "%s: %s: wrote to peer %d bytes\n",
+					remote_ip, __FUNCTION__, (int) rc);
 		}
 
 		FUNCEND;
@@ -4541,7 +4570,7 @@ static int read_client_connection(turn_turnserver *server,
 		SOCKET_TYPE st = get_ioa_socket_type(ss->client_socket);
 		if((st == TCP_SOCKET)||(st==TLS_SOCKET)||(st==TENTATIVE_TCP_SOCKET)) {
 			if(is_http_get((char*)ioa_network_buffer_data(in_buffer->nbh), ioa_network_buffer_get_size(in_buffer->nbh)))
-				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "%s: HTTP request: %s\n", __FUNCTION__, (char*)ioa_network_buffer_data(in_buffer->nbh));
+				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "%s: %s: HTTP request: %s\n", remote_ip, __FUNCTION__, (char*)ioa_network_buffer_data(in_buffer->nbh));
 				write_http_echo(server,ss);
 		}
 	}
@@ -4647,6 +4676,12 @@ static void peer_input_handler(ioa_socket_handle s, int event_type,
 		return;
 	}
 
+	char* remote_ip = "";
+	if(s) {
+	        remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(s));
+	}
+
+
 	int offset = STUN_CHANNEL_HEADER_LENGTH;
 
 	int ilen = min((int)ioa_network_buffer_get_size(in_buffer->nbh),
@@ -4689,7 +4724,7 @@ static void peer_input_handler(ioa_socket_handle s, int event_type,
 				in_buffer->nbh = NULL;
 				if (eve(server->verbose)) {
 					TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO,
-							"%s: send channel 0x%x\n", __FUNCTION__,
+							"%s: %s: send channel 0x%x\n", remote_ip, __FUNCTION__,
 							(int) (chnum));
 				}
 			} else {
@@ -4725,7 +4760,7 @@ static void peer_input_handler(ioa_socket_handle s, int event_type,
 			}
 			if (eve(server->verbose)) {
 				u16bits* t = (u16bits*) ioa_network_buffer_data(nbh);
-				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "Send data: 0x%x\n",
+				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "%s: Send data: 0x%x\n", remote_ip,
 						(int) (nswap16(t[0])));
 			}
 
@@ -4757,10 +4792,16 @@ static void client_input_handler(ioa_socket_handle s, int event_type,
 
 	read_client_connection(server, ss, data, can_resume, 1);
 
+	char* remote_ip = "";
+	if(s) {
+	        remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(s));
+	}
+
+
 	if (ss->to_be_closed) {
 		if(server->verbose) {
 			TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO,
-				"session %018llu: client socket to be closed in client handler: ss=0x%lx\n", (unsigned long long)(ss->id), (long)ss);
+				"%s: session %018llu: client socket to be closed in client handler: ss=0x%lx\n", remote_ip, (unsigned long long)(ss->id), (long)ss);
 		}
 		set_ioa_socket_tobeclosed(s);
 	}

@@ -64,6 +64,7 @@ void set_simple_log(int val);
 void turn_log_func_default(TURN_LOG_LEVEL level, const s08bits* format, ...);
 
 void addr_debug_print(int verbose, const ioa_addr *addr, const s08bits* s);
+char* ip_to_str(const ioa_addr *addr);
 
 /* Log */
 

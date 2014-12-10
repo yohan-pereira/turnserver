@@ -693,7 +693,9 @@ int send_session_cancellation_to_relay(turnsession_id sid)
 
 static int handle_relay_message(relay_server_handle rs, struct message_to_relay *sm)
 {
+	printf("in handle relay message!\n");
 	if(rs && sm) {
+	addr_debug_print(1, &(sm->m.sm.nd.src_addr), "handle relay message!");
 
 		switch (sm->t) {
 
