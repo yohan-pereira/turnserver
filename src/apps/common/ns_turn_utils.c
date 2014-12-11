@@ -536,9 +536,15 @@ int vrtpprintf(TURN_LOG_LEVEL level, const char *format, va_list args)
 	char s[MAX_RTPPRINTF_BUFFER_SIZE+1];
 #undef MAX_RTPPRINTF_BUFFER_SIZE
 
+	//generate string timestamp
+	time_t t = time(NULL);
+	char* tstr = ctime(&t);
+	//ctime returns a newline!!
+	tstr[strlen(tstr) -1] = 0;
+
 	size_t sz;
 
-	snprintf(s, sizeof(s), "%lu: ",(unsigned long)log_time());
+	snprintf(s, sizeof(s), "%s: ", tstr);
 	sz=strlen(s);
 	vsnprintf(s+sz, sizeof(s)-1-sz, format, args);
 	s[sizeof(s)-1]=0;
