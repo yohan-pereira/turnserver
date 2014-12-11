@@ -3513,10 +3513,7 @@ static int handle_turn_command(turn_turnserver *server, ts_ur_super_session *ss,
 	if(!(ss->client_socket))
 		return -1;
 
-	char* remote_ip = "";
-	if(ss->client_socket) {
-	        remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket));
-	}
+	
 
 
 	u16bits unknown_attrs[MAX_NUMBER_OF_UNKNOWN_ATTRS];
@@ -3529,14 +3526,18 @@ static int handle_turn_command(turn_turnserver *server, ts_ur_super_session *ss,
 	stun_tid_from_message_str(ioa_network_buffer_data(in_buffer->nbh), 
 				  ioa_network_buffer_get_size(in_buffer->nbh), 
 				  &tid);
+	char* remote_ip = "";
+	if(ss->client_socket) {
+	        remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket));
+	}
 
 	if (stun_is_request_str(ioa_network_buffer_data(in_buffer->nbh), 
 				ioa_network_buffer_get_size(in_buffer->nbh))) {
-
 		if((method == STUN_METHOD_BINDING) && (*(server->no_stun))) {
 
 			no_response = 1;
 			if(server->verbose) {
+				
 				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO,
 									"%s: %s: STUN method 0x%x ignored\n",
 									remote_ip, __FUNCTION__, (unsigned int)method);
@@ -3779,7 +3780,6 @@ static int handle_turn_command(turn_turnserver *server, ts_ur_super_session *ss,
 				}
 
 				if(*resp_constructed && !err_code && (origin_changed || dest_changed)) {
-
 					if (server->verbose) {
 						TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "%s: RFC 5780 request successfully processed\n", remote_ip);
 					}

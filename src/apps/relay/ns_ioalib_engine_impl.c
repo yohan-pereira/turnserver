@@ -196,13 +196,18 @@ static void log_socket_event(ioa_socket_handle s, const char *msg, int error) {
 			addr_to_string(&(s->remote_addr),(u08bits*)sraddr);
 			addr_to_string(&(s->local_addr),(u08bits*)sladdr);
 
+			char* remote_ip = "";
+			if(s) {
+			        remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(s));
+			}
+
 			if(EVUTIL_SOCKET_ERROR()) {
-				TURN_LOG_FUNC(ll,"session %018llu: %s: %s (local %s, remote %s)\n",(unsigned long long)id,
+				TURN_LOG_FUNC(ll,"remote %s: session %018llu: %s: %s (local %s, remote %s)\n", remote_ip, (unsigned long long)id,
 											msg, evutil_socket_error_to_string(EVUTIL_SOCKET_ERROR()),
 											sladdr,sraddr);
 			} else {
-				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO,"session %018llu: %s (local %s, remote %s)\n",
-						(unsigned long long)id,msg,sladdr,sraddr);
+				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO,"remote %s: session %018llu: %s (local %s, remote %s)\n",
+						remote_ip, (unsigned long long)id,msg,sladdr,sraddr);
 			}
 		}
 	}
@@ -1220,9 +1225,13 @@ int create_relay_ioa_sockets(ioa_engine_handle e,
 			break;
 		}
 	}
+	char* remote_ip = "";
+	if(client_s) {
+	        remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(client_s));
+	}
 
 	if (!(*rtp_s)) {
-		TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "%s: no available ports 3\n", __FUNCTION__);
+		TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: %s: no available ports 3\n", remote_ip, __FUNCTION__);
 		IOA_CLOSE_SOCKET(*rtp_s);
 		if (rtcp_s)
 			IOA_CLOSE_SOCKET(*rtcp_s);
@@ -1233,7 +1242,7 @@ int create_relay_ioa_sockets(ioa_engine_handle e,
 
 	if (rtcp_s && *rtcp_s && out_reservation_token && *out_reservation_token) {
 		if (rtcp_map_put(e->map_rtcp, *out_reservation_token, *rtcp_s) < 0) {
-			TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "%s: cannot update RTCP map\n", __FUNCTION__);
+			TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "remote %s: %s: cannot update RTCP map\n", remote_ip, __FUNCTION__);
 			IOA_CLOSE_SOCKET(*rtp_s);
 			if (rtcp_s)
 				IOA_CLOSE_SOCKET(*rtcp_s);
@@ -1623,14 +1632,16 @@ void detach_socket_net_data(ioa_socket_handle s)
 void close_ioa_socket(ioa_socket_handle s)
 {
 	if (s) {
+		char* remote_ip = "";
+		remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(s));
 		if(s->magic != SOCKET_MAGIC) {
-			TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "!!! %s wrong magic on socket: 0x%lx, st=%d, sat=%d\n", __FUNCTION__,(long)s, s->st, s->sat);
+			TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: !!! %s wrong magic on socket: 0x%lx, st=%d, sat=%d\n", remote_ip, __FUNCTION__,(long)s, s->st, s->sat);
 			return;
 		}
 
 		if(s->done) {
-			TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "!!! %s double free on socket: 0x%lx, st=%d, sat=%d\n", __FUNCTION__,(long)s, s->st, s->sat);
-			TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "!!! %s socket: 0x%lx was closed\n", __FUNCTION__,(long)s);
+			TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: !!! %s double free on socket: 0x%lx, st=%d, sat=%d\n", remote_ip, __FUNCTION__,(long)s, s->st, s->sat);
+			TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: !!! %s socket: 0x%lx was closed\n", remote_ip, __FUNCTION__,(long)s);
 			return;
 		}
 
@@ -1668,17 +1679,19 @@ ioa_socket_handle detach_ioa_socket(ioa_socket_handle s)
 	if (!s) {
 		TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR,"Detaching NULL socket\n");
 	} else {
+		char* remote_ip = "";
+		remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(s));
 		if((s->magic != SOCKET_MAGIC)||(s->done)) {
-			TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "!!! %s detach on bad socket: 0x%lx, st=%d, sat=%d\n", __FUNCTION__,(long)s, s->st, s->sat);
-			TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "!!! %s socket: 0x%lx was closed\n", __FUNCTION__,(long)s);
+			TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "remote %s: !!! %s detach on bad socket: 0x%lx, st=%d, sat=%d\n", remote_ip, __FUNCTION__,(long)s, s->st, s->sat);
+			TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "remote %s: !!! %s socket: 0x%lx was closed\n", remote_ip, __FUNCTION__,(long)s);
 			return ret;
 		}
 		if(s->tobeclosed) {
-			TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "!!! %s detach on tobeclosed socket: 0x%lx, st=%d, sat=%d\n", __FUNCTION__,(long)s, s->st, s->sat);
+			TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "remote %s: !!! %s detach on tobeclosed socket: 0x%lx, st=%d, sat=%d\n", remote_ip, __FUNCTION__,(long)s, s->st, s->sat);
 			return ret;
 		}
 		if(!(s->e)) {
-			TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "!!! %s detach on socket without engine: 0x%lx, st=%d, sat=%d\n", __FUNCTION__,(long)s, s->st, s->sat);
+			TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "remote %s: !!! %s detach on socket without engine: 0x%lx, st=%d, sat=%d\n", remote_ip, __FUNCTION__,(long)s, s->st, s->sat);
 			return ret;
 		}
 
@@ -1686,7 +1699,7 @@ ioa_socket_handle detach_ioa_socket(ioa_socket_handle s)
 
 		if(s->parent_s) {
 			if((s->st != UDP_SOCKET) && (s->st != DTLS_SOCKET)) {
-				TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "!!! %s detach on non-UDP child socket: 0x%lx, st=%d, sat=%d\n", __FUNCTION__,(long)s, s->st, s->sat);
+				TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "remote %s: !!! %s detach on non-UDP child socket: 0x%lx, st=%d, sat=%d\n", remote_ip, __FUNCTION__,(long)s, s->st, s->sat);
 				return ret;
 			}
 		}
@@ -1697,22 +1710,22 @@ ioa_socket_handle detach_ioa_socket(ioa_socket_handle s)
 			udp_fd = socket(s->local_addr.ss.sa_family, SOCK_DGRAM, 0);
 			if (udp_fd < 0) {
 				perror("socket");
-				TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR,"%s: Cannot allocate new socket\n",__FUNCTION__);
+				TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR,"remote %s: %s: Cannot allocate new socket\n",remote_ip, __FUNCTION__);
 				return ret;
 			}
 			if(sock_bind_to_device(udp_fd, (unsigned char*)(s->e->relay_ifname))<0) {
-				TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR,"Cannot bind udp server socket to device %s\n",(char*)(s->e->relay_ifname));
+				TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR,"remote %s: Cannot bind udp server socket to device %s\n", remote_ip, (char*)(s->e->relay_ifname));
 			}
 
 			if(addr_bind(udp_fd,&(s->local_addr),1)<0) {
-				TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR,"Cannot bind new detached udp server socket to local addr\n");
+				TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR,"remote %s: Cannot bind new detached udp server socket to local addr\n", remote_ip);
 				close(udp_fd);
 				return ret;
 			}
 
 			int connect_err=0;
 			if(addr_connect(udp_fd, &(s->remote_addr), &connect_err)<0) {
-				TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR,"Cannot connect new detached udp server socket to remote addr\n");
+				TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR,"remote %s: Cannot connect new detached udp server socket to remote addr\n", remote_ip);
 				close(udp_fd);
 				return ret;
 			}
@@ -1727,7 +1740,7 @@ ioa_socket_handle detach_ioa_socket(ioa_socket_handle s)
 
 		ret = (ioa_socket*)turn_malloc(sizeof(ioa_socket));
 		if(!ret) {
-			TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR,"%s: Cannot allocate new socket structure\n",__FUNCTION__);
+			TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR,"remote %s: %s: Cannot allocate new socket structure\n", remote_ip, __FUNCTION__);
 			if(udp_fd>=0)
 				close(udp_fd);
 			return ret;
@@ -2284,10 +2297,13 @@ static int socket_input_worker(ioa_socket_handle s)
 
 	if(!s)
 		return 0;
-
+	char* remote_ip = "";
+	if(s) {
+	        remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(s));
+	}
 	if((s->magic != SOCKET_MAGIC)||(s->done)) {
-		TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "!!!%s on socket: 0x%lx, st=%d, sat=%d\n", __FUNCTION__,(long)s, s->st, s->sat);
-		TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "!!! %s socket: 0x%lx was closed\n", __FUNCTION__,(long)s);
+		TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: !!!%s on socket: 0x%lx, st=%d, sat=%d\n", remote_ip, __FUNCTION__,(long)s, s->st, s->sat);
+		TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: !!! %s socket: 0x%lx was closed\n", remote_ip, __FUNCTION__,(long)s);
 		return -1;
 	}
 
@@ -2341,10 +2357,10 @@ static int socket_input_worker(ioa_socket_handle s)
 		if(tls_type) {
 			s->st = TLS_SOCKET;
 			if(s->ssl) {
-				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "!!!%s on socket: 0x%lx, st=%d, sat=%d: ssl already exist\n", __FUNCTION__,(long)s, s->st, s->sat);
+				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: !!!%s on socket: 0x%lx, st=%d, sat=%d: ssl already exist\n", remote_ip, __FUNCTION__,(long)s, s->st, s->sat);
 			}
 			if(s->bev) {
-				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "!!!%s on socket: 0x%lx, st=%d, sat=%d: bev already exist\n", __FUNCTION__,(long)s, s->st, s->sat);
+				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: !!!%s on socket: 0x%lx, st=%d, sat=%d: bev already exist\n", remote_ip, __FUNCTION__,(long)s, s->st, s->sat);
 			}
 			switch(tls_type) {
 #if defined(SSL_TXT_TLSV1_2)
@@ -2395,7 +2411,7 @@ static int socket_input_worker(ioa_socket_handle s)
 		{
 			s->st = TCP_SOCKET;
 			if(s->bev) {
-				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "!!!%s on socket: 0x%lx, st=%d, sat=%d: bev already exist\n", __FUNCTION__,(long)s, s->st, s->sat);
+				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: !!!%s on socket: 0x%lx, st=%d, sat=%d: bev already exist\n", remote_ip, __FUNCTION__,(long)s, s->st, s->sat);
 			}
 			s->bev = bufferevent_socket_new(s->e->event_base,
 							s->fd,
@@ -2825,9 +2841,13 @@ static int ssl_send(ioa_socket_handle s, const s08bits* buffer, int len, int ver
 		return -1;
 
 	SSL *ssl = s->ssl;
+	char* remote_ip = "";
+	if(s) {
+	        remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(s));
+	}
 
 	if (eve(verbose)) {
-		TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "%s: before write: buffer=0x%lx, len=%d\n", __FUNCTION__,(long)buffer,len);
+		TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: %s: before write: buffer=0x%lx, len=%d\n", remote_ip, __FUNCTION__,(long)buffer,len);
 	}
 
 	if(s->parent_s) {
@@ -2858,7 +2878,7 @@ static int ssl_send(ioa_socket_handle s, const s08bits* buffer, int len, int ver
 #if !defined(TURN_IP_RECVERR)
 	try_again = 0;
 #endif
-
+ 
 	try_start:
 
 	do {
@@ -2866,12 +2886,12 @@ static int ssl_send(ioa_socket_handle s, const s08bits* buffer, int len, int ver
 	} while (rc < 0 && errno == EINTR);
 
 	if (eve(verbose)) {
-		TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "%s: after write: %d\n", __FUNCTION__,rc);
+		TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: %s: after write: %d\n", remote_ip, __FUNCTION__,rc);
 	}
 
 	if (rc < 0 && ((errno == ENOBUFS) || (errno == EAGAIN))) {
 		if (eve(verbose)) {
-			TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "%s: ENOBUFS/EAGAIN\n", __FUNCTION__);
+			TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: %s: ENOBUFS/EAGAIN\n", remote_ip, __FUNCTION__);
 		}
 		return 0;
 	}
@@ -2879,7 +2899,7 @@ static int ssl_send(ioa_socket_handle s, const s08bits* buffer, int len, int ver
 	if (rc >= 0) {
 
 		if (eve(verbose)) {
-			TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "%s: wrote %d bytes\n", __FUNCTION__, (int) rc);
+			TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: %s: wrote %d bytes\n", remote_ip, __FUNCTION__, (int) rc);
 		}
 
 		return rc;
@@ -2887,14 +2907,14 @@ static int ssl_send(ioa_socket_handle s, const s08bits* buffer, int len, int ver
 	} else {
 
 		if (eve(verbose)) {
-				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "%s: failure: rc=%d, err=%d\n", __FUNCTION__, (int)rc,(int)SSL_get_error(ssl, rc));
+				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: %s: failure: rc=%d, err=%d\n", remote_ip, __FUNCTION__, (int)rc,(int)SSL_get_error(ssl, rc));
 		}
 
 		switch (SSL_get_error(ssl, rc)){
 		case SSL_ERROR_NONE:
 			//???
 			if (eve(verbose)) {
-				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "wrote %d bytes\n", (int) rc);
+				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: wrote %d bytes\n", remote_ip, (int) rc);
 			}
 			return 0;
 		case SSL_ERROR_WANT_WRITE:
@@ -2913,34 +2933,34 @@ static int ssl_send(ioa_socket_handle s, const s08bits* buffer, int len, int ver
 								int fd = BIO_get_fd(wbio,0);
 								if(fd>=0) {
 									try_again = 0;
-									TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "DTLS Socket, tring to recover write operation...\n");
+									TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: DTLS Socket, tring to recover write operation...\n", remote_ip);
 									socket_readerr(fd, &(s->local_addr));
 									goto try_start;
 								}
 							}
 						}
 					}
-					TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "DTLS Socket lost packet... fine\n");
+					TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: DTLS Socket lost packet... fine\n", remote_ip);
 					return 0;
 				}
-				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "DTLS Socket write error unrecoverable: %d; buffer=0x%lx, len=%d, ssl=0x%lx\n", err, (long)buffer, (int)len, (long)ssl);
+				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: DTLS Socket write error unrecoverable: %d; buffer=0x%lx, len=%d, ssl=0x%lx\n", remote_ip, err, (long)buffer, (int)len, (long)ssl);
 				return -1;
 			} else {
-				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "DTLS Socket write error recoverable: %d\n", err);
+				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: DTLS Socket write error recoverable: %d\n", remote_ip, err);
 				return 0;
 			}
 		}
 		case SSL_ERROR_SSL:
 			if (verbose) {
-				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "SSL write error: ");
+				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: SSL write error: ", remote_ip);
 				s08bits buf[65536];
-				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "%s (%d)\n", ERR_error_string(ERR_get_error(), buf),
+				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: %s (%d)\n", remote_ip, ERR_error_string(ERR_get_error(), buf),
 								SSL_get_error(ssl, rc));
 			}
 			return -1;
 		default:
 			if (verbose) {
-				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "Unexpected error while writing!\n");
+				TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: Unexpected error while writing!\n", remote_ip);
 			}
 			return -1;
 		}
@@ -3038,7 +3058,11 @@ int udp_send(ioa_socket_handle s, const ioa_addr* dest_addr, const s08bits* buff
 			} else if(is_connreset()) {
 				if(try_again) {
 					try_again = 0;
-					TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "UDP Socket, tring to recover write operation...\n");
+					char* remote_ip = "";
+					if(s) {
+					      remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(s));
+					}
+					TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: UDP Socket, tring to recover write operation...\n", remote_ip);
 					socket_readerr(fd, &(s->local_addr));
 					goto try_start;
 				}
@@ -3062,13 +3086,18 @@ int send_data_from_ioa_socket_nbh(ioa_socket_handle s, ioa_addr* dest_addr,
 		return -1;
 	}
 
+	char* remote_ip = "";
+	if(s) {
+	        remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(s));
+	}
+
 	if (s->done || (s->fd == -1)) {
 		TURN_LOG_FUNC(
 				TURN_LOG_LEVEL_INFO,
-				"!!! %s: (1) Trying to send data from closed socket: 0x%lx (1): done=%d, fd=%d, st=%d, sat=%d\n",
+				"remote %s: !!! %s: (1) Trying to send data from closed socket: 0x%lx (1): done=%d, fd=%d, st=%d, sat=%d\n", remote_ip,
 				__FUNCTION__, (long) s, (int) s->done,
 				(int) s->fd, s->st, s->sat);
-		TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "!!! %s socket: 0x%lx was closed\n", __FUNCTION__,(long)s);
+		TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: !!! %s socket: 0x%lx was closed\n", remote_ip, __FUNCTION__,(long)s);
 
 	} else if (nbh) {
 		if(!ioa_socket_check_bandwidth(s,ioa_network_buffer_get_size(nbh),0)) {
@@ -3155,7 +3184,7 @@ int send_data_from_ioa_socket_nbh(ioa_socket_handle s, ioa_addr* dest_addr,
 							  char sto[129];
 							  addr_to_string(dest_addr, (u08bits*)sto);
 							  TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR,
-									"%s: network error: address unreachable from %s to %s\n", 
+									"remote %s: %s: network error: address unreachable from %s to %s\n", remote_ip, 
 									__FUNCTION__,sfrom,sto);
 							}
 #endif
@@ -3174,7 +3203,10 @@ int send_data_from_ioa_socket_nbh(ioa_socket_handle s, ioa_addr* dest_addr,
 int register_callback_on_ioa_socket(ioa_engine_handle e, ioa_socket_handle s, int event_type, ioa_net_event_handler cb, void* ctx, int clean_preexisting)
 {
 	if(s) {
-
+		char *remote_ip = "";
+		if(s) {
+			remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(s));
+		}
 		if (event_type & IOA_EV_READ) {
 
 			if(e)
@@ -3188,7 +3220,7 @@ int register_callback_on_ioa_socket(ioa_engine_handle e, ioa_socket_handle s, in
 					if(s->read_event) {
 						if(!clean_preexisting) {
 							TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR,
-								"%s: software error: buffer preset 1\n", __FUNCTION__);
+								"remote %s: %s: software error: buffer preset 1\n", remote_ip, __FUNCTION__);
 							return -1;
 						}
 					} else {
@@ -3200,13 +3232,13 @@ int register_callback_on_ioa_socket(ioa_engine_handle e, ioa_socket_handle s, in
 					if(s->bev) {
 						if(!clean_preexisting) {
 							TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR,
-								"%s: software error: buffer preset 2\n", __FUNCTION__);
+								"remote %s: %s: software error: buffer preset 2\n", remote_ip, __FUNCTION__);
 							return -1;
 						}
 					} else if(s->read_event) {
 						if(!clean_preexisting) {
 							TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR,
-								"%s: software error: buffer preset 3\n", __FUNCTION__);
+								"remote %s: %s: software error: buffer preset 3\n", remote_ip, __FUNCTION__);
 							return -1;
 						}
 					} else {
@@ -3218,7 +3250,7 @@ int register_callback_on_ioa_socket(ioa_engine_handle e, ioa_socket_handle s, in
 					if(s->bev) {
 						if(!clean_preexisting) {
 							TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR,
-								"%s: software error: buffer preset 4\n", __FUNCTION__);
+								"remote %s: %s: software error: buffer preset 4\n", remote_ip, __FUNCTION__);
 							return -1;
 						}
 					} else {
@@ -3236,7 +3268,7 @@ int register_callback_on_ioa_socket(ioa_engine_handle e, ioa_socket_handle s, in
 					if(s->bev) {
 						if(!clean_preexisting) {
 							TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR,
-								"%s: software error: buffer preset 5\n", __FUNCTION__);
+								"remote %s: %s: software error: buffer preset 5\n", remote_ip, __FUNCTION__);
 							return -1;
 						}
 					} else {
@@ -3268,7 +3300,7 @@ int register_callback_on_ioa_socket(ioa_engine_handle e, ioa_socket_handle s, in
 					break;
 				default:
 					TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR,
-							"%s: software error: unknown socket type: %d\n", __FUNCTION__,(int)(s->st));
+							"remote %s: %s: software error: unknown socket type: %d\n", remote_ip, __FUNCTION__,(int)(s->st));
 					return -1;
 				}
 			}
@@ -3286,14 +3318,18 @@ int register_callback_on_ioa_socket(ioa_engine_handle e, ioa_socket_handle s, in
 int ioa_socket_tobeclosed(ioa_socket_handle s)
 {
 	if(s) {
+		char *remote_ip = "";
+		if(s) {
+			remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(s));
+		}
 		if(s->magic != SOCKET_MAGIC) {
-			TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "!!! %s: magic is wrong on the socket: 0x%lx, st=%d, sat=%d\n",__FUNCTION__,(long)s,s->st,s->sat);
+			TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: !!! %s: magic is wrong on the socket: 0x%lx, st=%d, sat=%d\n", remote_ip,__FUNCTION__,(long)s,s->st,s->sat);
 			return 1;
 		}
 
 		if(s->done) {
-			TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "!!! %s: check on already closed socket: 0x%lx, st=%d, sat=%d\n",__FUNCTION__,(long)s,s->st,s->sat);
-			TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "!!! %s socket: 0x%lx was closed\n", __FUNCTION__,(long)s);
+			TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: !!! %s: check on already closed socket: 0x%lx, st=%d, sat=%d\n", remote_ip,__FUNCTION__,(long)s,s->st,s->sat);
+			TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: !!! %s socket: 0x%lx was closed\n", remote_ip, __FUNCTION__,(long)s);
 			return 1;
 		}
 		if(s->tobeclosed) {
@@ -3520,8 +3556,12 @@ void turn_report_session_usage(void *session)
 		if(server && (ss->received_packets || ss->sent_packets)) {
 			ioa_engine_handle e = turn_server_get_engine(server);
 			if(((ss->received_packets+ss->sent_packets)&2047)==0) {
+				char* remote_ip = "";
+				if(ss->client_socket) {
+					remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket));
+				}
 				if(e && e->verbose) {
-					TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO,"session %018llu: usage: realm=<%s>, username=<%s>, rp=%lu, rb=%lu, sp=%lu, sb=%lu\n", (unsigned long long)(ss->id), (char*)ss->realm_options.name, (char*)ss->username, (unsigned long)(ss->received_packets), (unsigned long)(ss->received_bytes),(unsigned long)(ss->sent_packets),(unsigned long)(ss->sent_bytes));
+					TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO,"remote %s: session %018llu: usage: realm=<%s>, username=<%s>, rp=%lu, rb=%lu, sp=%lu, sb=%lu\n", remote_ip, (unsigned long long)(ss->id), (char*)ss->realm_options.name, (char*)ss->username, (unsigned long)(ss->received_packets), (unsigned long)(ss->received_bytes),(unsigned long)(ss->sent_packets),(unsigned long)(ss->sent_bytes));
 				}
 #if !defined(TURN_NO_HIREDIS)
 				{
