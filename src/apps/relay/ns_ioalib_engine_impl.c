@@ -196,9 +196,9 @@ static void log_socket_event(ioa_socket_handle s, const char *msg, int error) {
 			addr_to_string(&(s->remote_addr),(u08bits*)sraddr);
 			addr_to_string(&(s->local_addr),(u08bits*)sladdr);
 
-			char* remote_ip = "";
+			char remote_ip[20];
 			if(s) {
-			        remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(s));
+			        ip_to_str(get_remote_addr_from_ioa_socket(s),remote_ip);
 			}
 
 			if(EVUTIL_SOCKET_ERROR()) {
@@ -1225,9 +1225,9 @@ int create_relay_ioa_sockets(ioa_engine_handle e,
 			break;
 		}
 	}
-	char* remote_ip = "";
+	char remote_ip[20];
 	if(client_s) {
-	        remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(client_s));
+	        ip_to_str(get_remote_addr_from_ioa_socket(client_s),remote_ip);
 	}
 
 	if (!(*rtp_s)) {
@@ -1632,8 +1632,8 @@ void detach_socket_net_data(ioa_socket_handle s)
 void close_ioa_socket(ioa_socket_handle s)
 {
 	if (s) {
-		char* remote_ip = "";
-		remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(s));
+		char remote_ip[20];
+		ip_to_str(get_remote_addr_from_ioa_socket(s),remote_ip);
 		if(s->magic != SOCKET_MAGIC) {
 			TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: !!! %s wrong magic on socket: 0x%lx, st=%d, sat=%d\n", remote_ip, __FUNCTION__,(long)s, s->st, s->sat);
 			return;
@@ -1679,8 +1679,8 @@ ioa_socket_handle detach_ioa_socket(ioa_socket_handle s)
 	if (!s) {
 		TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR,"Detaching NULL socket\n");
 	} else {
-		char* remote_ip = "";
-		remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(s));
+		char remote_ip[20];
+		ip_to_str(get_remote_addr_from_ioa_socket(s),remote_ip);
 		if((s->magic != SOCKET_MAGIC)||(s->done)) {
 			TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "remote %s: !!! %s detach on bad socket: 0x%lx, st=%d, sat=%d\n", remote_ip, __FUNCTION__,(long)s, s->st, s->sat);
 			TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "remote %s: !!! %s socket: 0x%lx was closed\n", remote_ip, __FUNCTION__,(long)s);
@@ -2297,9 +2297,9 @@ static int socket_input_worker(ioa_socket_handle s)
 
 	if(!s)
 		return 0;
-	char* remote_ip = "";
+	char remote_ip[20];
 	if(s) {
-	        remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(s));
+	        ip_to_str(get_remote_addr_from_ioa_socket(s),remote_ip);
 	}
 	if((s->magic != SOCKET_MAGIC)||(s->done)) {
 		TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: !!!%s on socket: 0x%lx, st=%d, sat=%d\n", remote_ip, __FUNCTION__,(long)s, s->st, s->sat);
@@ -2841,9 +2841,9 @@ static int ssl_send(ioa_socket_handle s, const s08bits* buffer, int len, int ver
 		return -1;
 
 	SSL *ssl = s->ssl;
-	char* remote_ip = "";
+	char remote_ip[20];
 	if(s) {
-	        remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(s));
+	        ip_to_str(get_remote_addr_from_ioa_socket(s),remote_ip);
 	}
 
 	if (eve(verbose)) {
@@ -3058,9 +3058,9 @@ int udp_send(ioa_socket_handle s, const ioa_addr* dest_addr, const s08bits* buff
 			} else if(is_connreset()) {
 				if(try_again) {
 					try_again = 0;
-					char* remote_ip = "";
+					char remote_ip[20];
 					if(s) {
-					      remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(s));
+					      ip_to_str(get_remote_addr_from_ioa_socket(s),remote_ip);
 					}
 					TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: UDP Socket, tring to recover write operation...\n", remote_ip);
 					socket_readerr(fd, &(s->local_addr));
@@ -3086,9 +3086,9 @@ int send_data_from_ioa_socket_nbh(ioa_socket_handle s, ioa_addr* dest_addr,
 		return -1;
 	}
 
-	char* remote_ip = "";
+	char remote_ip[20];
 	if(s) {
-	        remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(s));
+	        ip_to_str(get_remote_addr_from_ioa_socket(s),remote_ip);
 	}
 
 	if (s->done || (s->fd == -1)) {
@@ -3203,9 +3203,9 @@ int send_data_from_ioa_socket_nbh(ioa_socket_handle s, ioa_addr* dest_addr,
 int register_callback_on_ioa_socket(ioa_engine_handle e, ioa_socket_handle s, int event_type, ioa_net_event_handler cb, void* ctx, int clean_preexisting)
 {
 	if(s) {
-		char *remote_ip = "";
+		char remote_ip[20];
 		if(s) {
-			remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(s));
+			ip_to_str(get_remote_addr_from_ioa_socket(s),remote_ip);
 		}
 		if (event_type & IOA_EV_READ) {
 
@@ -3318,9 +3318,9 @@ int register_callback_on_ioa_socket(ioa_engine_handle e, ioa_socket_handle s, in
 int ioa_socket_tobeclosed(ioa_socket_handle s)
 {
 	if(s) {
-		char *remote_ip = "";
+		char remote_ip[20];
 		if(s) {
-			remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(s));
+			ip_to_str(get_remote_addr_from_ioa_socket(s),remote_ip);
 		}
 		if(s->magic != SOCKET_MAGIC) {
 			TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: !!! %s: magic is wrong on the socket: 0x%lx, st=%d, sat=%d\n", remote_ip,__FUNCTION__,(long)s,s->st,s->sat);
@@ -3556,9 +3556,9 @@ void turn_report_session_usage(void *session)
 		if(server && (ss->received_packets || ss->sent_packets)) {
 			ioa_engine_handle e = turn_server_get_engine(server);
 			if(((ss->received_packets+ss->sent_packets)&2047)==0) {
-				char* remote_ip = "";
+				char remote_ip[20];
 				if(ss->client_socket) {
-					remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket));
+					ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket),remote_ip);
 				}
 				if(e && e->verbose) {
 					TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO,"remote %s: session %018llu: usage: realm=<%s>, username=<%s>, rp=%lu, rb=%lu, sp=%lu, sb=%lu\n", remote_ip, (unsigned long long)(ss->id), (char*)ss->realm_options.name, (char*)ss->username, (unsigned long)(ss->received_packets), (unsigned long)(ss->received_bytes),(unsigned long)(ss->sent_packets),(unsigned long)(ss->sent_bytes));

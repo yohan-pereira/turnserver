@@ -234,12 +234,11 @@ void addr_debug_print(int verbose, const ioa_addr *addr, const s08bits* s)
 	}
 }
 
-char* ip_to_str(const ioa_addr *addr)
+char* ip_to_str(const ioa_addr *addr, char *s)
 {
   if(!addr) {
     return "";
   }
-  char* s [80];
   s08bits addrbuf[INET6_ADDRSTRLEN];
   if (addr->ss.sa_family == AF_INET) {
     sprintf(s, "IPv4 %s:%d", inet_ntop(AF_INET, &addr->s4.sin_addr, addrbuf, INET6_ADDRSTRLEN), nswap16(addr->s4.sin_port));

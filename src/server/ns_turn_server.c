@@ -65,9 +65,9 @@ int TURN_MAX_ALLOCATE_TIMEOUT_STUN_ONLY = 3;
 static inline void log_method(ts_ur_super_session* ss, const char *method, int err_code, const u08bits *reason)
 {
   if(ss) {
-	  char* remote_ip = "";
+	  char remote_ip[20];
 	  if(ss->client_socket) {
-		  remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket));
+		  ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket), remote_ip);
 	  } 	    
 	  if(!method) method = "unknown";
 	  if(!err_code) {
@@ -1908,8 +1908,8 @@ static void tcp_peer_connection_completed_callback(int success, void *arg)
 		ioa_network_buffer_handle nbh = ioa_network_buffer_allocate(server->e);
 		size_t len = ioa_network_buffer_get_size(nbh);
 
-		char* remote_ip = "";
-		remote_ip = ip_to_str(&tc->peer_addr);
+		char remote_ip[20];
+		ip_to_str(&tc->peer_addr, remote_ip);
 
 		if(success) {
 			if(register_callback_on_ioa_socket(server->e, tc->peer_s, IOA_EV_READ, tcp_peer_input_handler, tc, 1)<0) {
@@ -2081,8 +2081,8 @@ static void tcp_peer_accept_connection(ioa_socket_handle s, void *arg)
 			FUNCEND;
 			return;
 		}
-		char* remote_ip = "";
-		remote_ip = ip_to_str(peer_addr);
+		char remote_ip[20];
+		ip_to_str(peer_addr, remote_ip);
 		tcp_connection *tc = get_tcp_connection_by_peer(a, peer_addr);
 		if(tc) {
 			TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "%s: %s: peer data socket with this address already exist\n", remote_ip, __FUNCTION__);
@@ -3207,9 +3207,9 @@ static int check_stun_auth(turn_turnserver *server,
 			int *postpone_reply,
 			int can_resume)
 {
-	char* remote_ip = "";
+	char remote_ip[20];
 	if(ss->client_socket) {
-	        remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket));
+	        ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket), remote_ip);
 	}
 	u08bits usname[STUN_MAX_USERNAME_SIZE+1];
 	u08bits nonce[STUN_MAX_NONCE_SIZE+1];
@@ -3526,9 +3526,9 @@ static int handle_turn_command(turn_turnserver *server, ts_ur_super_session *ss,
 	stun_tid_from_message_str(ioa_network_buffer_data(in_buffer->nbh), 
 				  ioa_network_buffer_get_size(in_buffer->nbh), 
 				  &tid);
-	char* remote_ip = "";
+	char remote_ip[20];
 	if(ss->client_socket) {
-	        remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket));
+	        ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket), remote_ip);
 	}
 
 	if (stun_is_request_str(ioa_network_buffer_data(in_buffer->nbh), 
@@ -4094,9 +4094,9 @@ int shutdown_client_connection(turn_turnserver *server, ts_ur_super_session *ss,
 	if (!ss)
 		return -1;
 
-	char* remote_ip = "";
+	char remote_ip[20];
 	if(ss->client_socket) {
-	        remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket));
+	        ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket), remote_ip);
 	}
 
 	report_turn_session_info(server,ss,1);
@@ -4461,9 +4461,9 @@ static int read_client_connection(turn_turnserver *server,
 		ss->received_bytes += (u32bits)ioa_network_buffer_get_size(in_buffer->nbh);
 		turn_report_session_usage(ss);
 	}
-	char* remote_ip = "";
+	char remote_ip[20];
 	if(ss->client_socket) {
-	        remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket));
+	        ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket), remote_ip);
 	}
 
 	if (eve(server->verbose)) {
@@ -4676,9 +4676,9 @@ static void peer_input_handler(ioa_socket_handle s, int event_type,
 		return;
 	}
 
-	char* remote_ip = "";
+	char remote_ip[20];
 	if(s) {
-	        remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(s));
+	        ip_to_str(get_remote_addr_from_ioa_socket(s), remote_ip);
 	}
 
 
@@ -4792,9 +4792,9 @@ static void client_input_handler(ioa_socket_handle s, int event_type,
 
 	read_client_connection(server, ss, data, can_resume, 1);
 
-	char* remote_ip = "";
+	char remote_ip[20];
 	if(s) {
-	        remote_ip = ip_to_str(get_remote_addr_from_ioa_socket(s));
+	        ip_to_str(get_remote_addr_from_ioa_socket(s), remote_ip);
 	}
 
 
