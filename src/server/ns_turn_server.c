@@ -1804,6 +1804,12 @@ static void tcp_deliver_delayed_buffer(unsent_buffer *ub, ioa_socket_handle s, t
 			} else {
 				++(ss->sent_packets);
 				ss->sent_bytes += bytes;
+				char remote_ip[20];	
+				ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket), remote_ip);
+
+				char peer_ip[20];
+				ip_to_str(get_remote_addr_from_ioa_socket(s), peer_ip);
+				TURN_LOG_FUNC(TURN_LOG_LEVEL_ERROR, "remote %s: %s: CLIENT PEER \n", remote_ip, peer_ip);
 				turn_report_session_usage(ss);
 			}
 			pop_unsent_buffer(ub);
@@ -4808,11 +4814,13 @@ static void client_input_handler(ioa_socket_handle s, int event_type,
 	}
 
 	read_client_connection(server, ss, data, can_resume, 1);
-
 	char remote_ip[20];
 	if(s) {
 	        ip_to_str(get_remote_addr_from_ioa_socket(s), remote_ip);
 	}
+
+	TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO,
+				"%s: KILL ME\n", remote_ip);
 
 
 	if (ss->to_be_closed) {
