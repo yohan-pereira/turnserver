@@ -3555,7 +3555,7 @@ void turn_report_session_usage(void *session)
 		turn_turnserver *server = (turn_turnserver*)ss->server;
 		if(server && (ss->received_packets || ss->sent_packets)) {
 			ioa_engine_handle e = turn_server_get_engine(server);
-			if (((ss->received_packets+ss->sent_packets) < 100) || (((ss->received_packets+ss->sent_packets)&255)==0)) {
+			if  (((ss->received_packets+ss->sent_packets)&255)==0) {
 				char remote_ip[20];
 				if(ss->client_socket) {
 					ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket),remote_ip);
