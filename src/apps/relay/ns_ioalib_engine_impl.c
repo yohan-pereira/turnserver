@@ -3561,7 +3561,8 @@ void turn_report_session_usage(void *session)
 					ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket),remote_ip);
 				}
 				if(e && e->verbose) {
-					TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO,"remote %s: session %018llu: usage: realm=<%s>, username=<%s>, rp=%lu, rb=%lu, sp=%lu, sb=%lu\n", remote_ip, (unsigned long long)(ss->id), (char*)ss->realm_options.name, (char*)ss->username, (unsigned long)(ss->received_packets), (unsigned long)(ss->received_bytes),(unsigned long)(ss->sent_packets),(unsigned long)(ss->sent_bytes));
+					//TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO,"remote %s: session %018llu: usage: realm=<%s>, username=<%s>, rp=%lu, rb=%lu, sp=%lu, sb=%lu\n", remote_ip, (unsigned long long)(ss->id), (char*)ss->realm_options.name, (char*)ss->username, (unsigned long)(ss->received_packets), (unsigned long)(ss->received_bytes),(unsigned long)(ss->sent_packets),(unsigned long)(ss->sent_bytes));
+					//TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO,"remote %s: session %018llu: total usage: realm=<%s>, username=<%s>, rp=%lu, rb=%lu, sp=%lu, sb=%lu\n", remote_ip, (unsigned long long)(ss->id), (char*)ss->realm_options.name, (char*)ss->username, (unsigned long)(ss->t_received_packets), (unsigned long)(ss->t_received_bytes),(unsigned long)(ss->t_sent_packets),(unsigned long)(ss->t_sent_bytes));
 				}
 #if !defined(TURN_NO_HIREDIS)
 				{

@@ -1816,6 +1816,7 @@ static void tcp_peer_input_handler(ioa_socket_handle s, int event_type, ioa_net_
 	if (!(event_type & IOA_EV_READ) || !arg)
 		return;
 
+	printf("TCP PEER INPUT HANDLER");
 	UNUSED_ARG(s);
 	UNUSED_ARG(can_resume);
 
@@ -1839,13 +1840,6 @@ static void tcp_peer_input_handler(ioa_socket_handle s, int event_type, ioa_net_
 
 	int ret = send_data_from_ioa_socket_nbh(tc->client_s, NULL, nbh, TTL_IGNORE, TOS_IGNORE);
 
-	char remote_ip[20];	
-	ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket), remote_ip);
-
-	char peer_ip[20];
-	ip_to_str(&tc->peer_addr, peer_ip);
-
-	TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: peer!! %s\n", remote_ip, peer_ip);
 	if (ret < 0) {
 		set_ioa_socket_tobeclosed(s);
 	} else if(ss) {
@@ -1857,6 +1851,7 @@ static void tcp_peer_input_handler(ioa_socket_handle s, int event_type, ioa_net_
 
 static void tcp_client_input_handler_rfc6062data(ioa_socket_handle s, int event_type, ioa_net_data *in_buffer, void *arg, int can_resume)
 {
+	printf("TCP CLIENT INPUT HANDLER");
 	if (!(event_type & IOA_EV_READ) || !arg)
 		return;
 
@@ -1904,6 +1899,7 @@ static void tcp_conn_bind_timeout_handler(ioa_engine_handle e, void *arg)
 
 static void tcp_peer_connection_completed_callback(int success, void *arg)
 {
+	printf("PEER CONNECTION COMPLETED");
 	if(arg) {
 		tcp_connection *tc = (tcp_connection *)arg;
 		allocation *a = (allocation*)(tc->owner);
@@ -1998,6 +1994,7 @@ static int tcp_start_connection_to_peer(turn_turnserver *server, ts_ur_super_ses
 				int *err_code, const u08bits **reason)
 {
 	FUNCSTART;
+	printf("START CONNECTION TO PEER!!!!!");
 
 	if(!ss) {
 		*err_code = 500;
@@ -2047,6 +2044,16 @@ static int tcp_start_connection_to_peer(turn_turnserver *server, ts_ur_super_ses
 						tcp_peer_conn_timeout_handler, tc, 0,
 						"tcp_peer_conn_timeout_handler");
 
+	char remote_ip[20];	
+	ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket), remote_ip);
+
+	char peer_ip[20];
+	ip_to_str(&tc->peer_addr, peer_ip);
+
+	TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: peer!! %s\n", remote_ip, peer_ip);
+
+	printf("remote %s: STARTING CONNECTION TO PEER %s", remote_ip, peer_ip);
+
 	ioa_socket_handle tcs = ioa_create_connecting_tcp_relay_socket(get_relay_socket(a,peer_addr->ss.sa_family),
 			peer_addr, tcp_peer_connection_completed_callback, tc);
 	if(!tcs) {
@@ -2070,6 +2077,8 @@ static int tcp_start_connection_to_peer(turn_turnserver *server, ts_ur_super_ses
 
 static void tcp_peer_accept_connection(ioa_socket_handle s, void *arg)
 {
+
+	printf("ACCEPT CONNECTION TO PEER!!!!!");
 	if(s) {
 
 		if(!arg) {
