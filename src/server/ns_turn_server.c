@@ -2980,6 +2980,16 @@ static int update_permission(ts_ur_super_session *ss, ioa_addr *peer_addr) {
 
 	turn_permission_info* tinfo = allocation_get_permission(a, peer_addr);
 
+        char peer_ip[20];
+        ip_to_str(peer_addr, peer_ip);
+
+        char remote_ip[20];
+        ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket), remote_ip);
+
+        TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO,
+                       "remote %s: create permission for for: %s\n", remote_ip, peer_ip);
+
+
 	if (!tinfo) {
 		tinfo = allocation_add_permission(a, peer_addr);
 	}
@@ -4799,15 +4809,6 @@ static void client_input_handler(ioa_socket_handle s, int event_type,
 	}
 
 	read_client_connection(server, ss, data, can_resume, 1);
-
-        char peer_ip[20];
-        ip_to_str(peer_addr, peer_ip);
-
-        char remote_ip[20];
-        ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket), remote_ip);
-
-        TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO,
-                       "remote %s: create permission for for: %s\n", remote_ip, peer_ip);
 
 	char remote_ip[20];
 	if(s) {
