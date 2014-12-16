@@ -4800,9 +4800,15 @@ static void client_input_handler(ioa_socket_handle s, int event_type,
 
 	read_client_connection(server, ss, data, can_resume, 1);
 
-	char remote_ip[20];
-	if(s) {
+	if(s && ss->client_socket) {
+		char peer_ip[20];
 	        ip_to_str(get_remote_addr_from_ioa_socket(s), remote_ip);
+
+		char remote_ip[20];
+	        ip_to_str(get_remote_addr_from_ioa_socket(s), remote_ip);
+
+		TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO,
+				"%s: PEER IP: %s \n", remote_ip, peer_ip);
 	}
 
 
