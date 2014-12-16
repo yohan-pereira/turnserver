@@ -1838,6 +1838,14 @@ static void tcp_peer_input_handler(ioa_socket_handle s, int event_type, ioa_net_
 	u32bits bytes = (u32bits)ioa_network_buffer_get_size(nbh);
 
 	int ret = send_data_from_ioa_socket_nbh(tc->client_s, NULL, nbh, TTL_IGNORE, TOS_IGNORE);
+
+	char remote_ip[20];	
+	ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket), remote_ip);
+
+	char peer_ip[20];
+	ip_to_str(&tc->peer_addr, peer_ip);
+
+	TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: peer!! %s\n", remote_ip, peer_ip);
 	if (ret < 0) {
 		set_ioa_socket_tobeclosed(s);
 	} else if(ss) {
