@@ -2987,7 +2987,7 @@ static int update_permission(ts_ur_super_session *ss, ioa_addr *peer_addr) {
         ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket), remote_ip);
 
         TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO,
-                       "remote %s: create permission for for: %s\n", remote_ip, peer_ip);
+                       "remote %s: create permission for: %s\n", remote_ip, peer_ip);
 
 
 	if (!tinfo) {
