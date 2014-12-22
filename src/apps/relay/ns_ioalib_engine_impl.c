@@ -2547,7 +2547,20 @@ static int socket_input_worker(ioa_socket_handle s)
 				buf_elem = NULL;
 			}
 		}
-	}
+	} else  if (!((s->sat == TCP_CLIENT_DATA_SOCKET)||(s->sat==TCP_RELAY_DATA_SOCKET))) {
+                ioa_net_data nd2;
+                ns_bzero(&nd2,sizeof(ioa_net_data));
+                addr_cpy(&(nd2.src_addr),&remote_addr);
+                nd2.nbh = buf_elem;
+                nd2.recv_ttl = ttl;
+                nd2.recv_tos = tos;
+                int bytes_to_dump = 100;
+                char hex[hex_dump_size(bytes_to_dump)];
+                hex_dump(hex, (char*)ioa_network_buffer_data(nd2.nbh), bytes_to_dump);
+	        TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO, "remote %s: can't handle input dumping first %i bytes\n%s\n",remote_ip, bytes_to_dump, hex);
+        }
+
+
 
 	if(buf_elem) {
 		free_blist_elem(s->e,buf_elem);

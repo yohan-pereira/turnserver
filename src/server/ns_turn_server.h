@@ -225,6 +225,11 @@ void turn_cancel_session(turn_turnserver *server, turnsession_id sid);
 
 ///////////////////////////////////////////
 
+//misc
+void hex_dump (char *desc, void *addr, int len);
+int hex_dump_size (int len);
+//
+
 #ifdef __cplusplus
 }
 #endif

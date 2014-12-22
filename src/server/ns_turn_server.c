@@ -4457,6 +4457,54 @@ static void write_http_echo(turn_turnserver *server, ts_ur_super_session *ss)
 	}
 }
 
+void hex_dump (char *output, void *addr, int len) {
+    int i;
+    unsigned char buff[17];
+    unsigned char *pc = (unsigned char*)addr;
+
+    // Process every byte in the data.
+    for (i = 0; i < len; i++) {
+        // Multiple of 16 means new line (with line offset).
+
+        if ((i % 16) == 0) {
+            // Just don't print ASCII for the zeroth line.
+            if (i != 0)
+                sprintf (output + strlen(output), "  %s\n", buff);
+
+            // Output the offset.
+            sprintf (output + strlen(output), "  %04x ", i);
+        }
+
+        // Now the hex code for the specific character.
+        sprintf (output + strlen(output), " %02x", pc[i]);
+
+        // And store a printable ASCII character for later.
+        if ((pc[i] < 0x20) || (pc[i] > 0x7e))
+            buff[i % 16] = '.';
+        else
+            buff[i % 16] = pc[i];
+        buff[(i % 16) + 1] = '\0';
+    }
+
+    // Pad out last line if not exactly 16 characters.
+    while ((i % 16) != 0) {
+        sprintf (output + strlen(output), "   ");
+        i++;
+    }
+
+    // And print the final ASCII bit.
+    sprintf (output + strlen(output), "  %s\n", buff);
+}
+
+int hex_dump_size(int len) {
+  int no_lines =  len/16;
+  //increment no_lines if not multiple of 16
+  if (( len % 16) > 0) 
+    no_lines++;
+  //int char_per_line = 74;
+  return no_lines * 74;
+}
+
 static int read_client_connection(turn_turnserver *server,
 				  	  	  	  	  ts_ur_super_session *ss, ioa_net_data *in_buffer,
 				  	  	  	  	  int can_resume, int count_usage) {
