@@ -2581,6 +2581,14 @@ static int handle_turn_channel_bind(turn_turnserver *server,
 			*reason = (const u08bits *)"Bad channel number";
 
 		} else {
+			char peer_ip[20];
+			ip_to_str(&peer_addr, peer_ip);
+
+			char remote_ip[20];
+			ip_to_str(get_remote_addr_from_ioa_socket(ss->client_socket), remote_ip);
+
+			TURN_LOG_FUNC(TURN_LOG_LEVEL_INFO,
+				    "remote %s: channel bind for: %s\n", remote_ip, peer_ip);
 
 			ch_info* chn = allocation_get_ch_info(a, chnum);
 			turn_permission_info* tinfo = NULL;
